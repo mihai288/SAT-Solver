@@ -6,9 +6,8 @@ lista_clauze = []
 pasi = 0
 
 def intro():
-    print("=== Sat Solver ===")
     print("format exemplu: [1,2] [3,4] [-1,-4]")
-    print("==================")
+    print("=== Sat Solver ===")
 
 with open('input.txt', 'r') as f:
     clauze_input = f.read()
@@ -24,36 +23,64 @@ def citeste_clauze():
             valori = list(map(int, clauza.split(",")))
             lista_clauze.append(sorted(list(set(valori))))
 
-def rezolutie(cl1, cl2):
+def rezolutie(clauza1, clauza2):
     global pasi
     pasi += 1
-    for l in cl1:
-        if -l in cl2:
-            noua = list(set([x for x in cl1 if x != l] + [x for x in cl2 if x != -l]))
-            return sorted(noua)
+
+    for literal in clauza1:
+        negatie = -literal
+        if negatie in clauza2:
+
+            noua_clauza = []
+
+            for lit in clauza1:
+                if lit != literal:
+                    noua_clauza.append(lit)
+
+            for lit in clauza2:
+                if lit != negatie and lit not in noua_clauza:
+                    noua_clauza.append(lit)
+
+            noua_clauza.sort()
+            return noua_clauza
+
     return None
 
+
 def dp(clauze):
-    clauze = [sorted(list(set(c))) for c in clauze]
-    clauze_set = set(tuple(c) for c in clauze)
+    # eliminam duplicatele din fiecare clauza
+    clauze = [sorted(list(set(clauza))) for clauza in clauze]
+
+    clauze_existente = set(tuple(clauza) for clauza in clauze)
 
     while True:
-        rezolutii_noi = []
+        rezolutii_generate = []
+
+        # aplicam rezolutia pe fiecare pereche de clauze
         for i in range(len(clauze)):
             for j in range(i + 1, len(clauze)):
-                noua = rezolutie(clauze[i], clauze[j])
-                if noua is not None:
-                    if noua == []:
-                        return False
-                    t = tuple(noua)
-                    if t not in clauze_set:
-                        rezolutii_noi.append(noua)
-                        clauze_set.add(t)
-        if not rezolutii_noi:
-            break
-        clauze.extend(rezolutii_noi)
+                clauza_rezolvata = rezolutie(clauze[i], clauze[j])
 
+                if clauza_rezolvata is not None:
+                    if clauza_rezolvata == []:
+                        return False
+
+                    # adaugam clauzele noi care nu sunt in set
+                    clauza_tuplu = tuple(clauza_rezolvata)
+                    if clauza_tuplu not in clauze_existente:
+                        rezolutii_generate.append(clauza_rezolvata)
+                        clauze_existente.add(clauza_tuplu)
+
+        # daca nu s-au generat clauze noi, nu mai continuam
+        if not rezolutii_generate:
+            break
+
+        # adaugam noile clauze in lista principala
+        clauze.extend(rezolutii_generate)
+
+    # daca nu s-a generat clauza vida -> sat
     return True
+
 
 def main():
     intro()

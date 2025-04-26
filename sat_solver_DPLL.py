@@ -6,9 +6,9 @@ lista_clauze = []
 pasi = 0
 
 def intro():
-    print("=== Sat Solver ===")
     print("format exemplu: [1,2] [3,4] [-1,-4]")
-    print("==================")
+    print("=== Sat Solver ===")
+
 
 with open('input.txt','r') as f:
     clauze_input = f.read()
@@ -26,54 +26,75 @@ def citeste_clauze():
 
 
 def simplifica(clauze, literal):
-    nou = []
+    clauze_actualizate = []
+
     for clauza in clauze:
         if literal in clauza:
             continue
-        noua_clauza = [l for l in clauza if l != -literal]
-        nou.append(noua_clauza)
-    return nou
+
+        # eliminam negatia literalului
+        clauza_noua = []
+        for l in clauza:
+            if l != -literal:
+                clauza_noua.append(l)
+
+        clauze_actualizate.append(clauza_noua)
+
+    return clauze_actualizate
+
 
 
 def dpll(clauze, asignari={}):
     global pasi
     pasi += 1
 
-    # 1. elimina clauzele goale
+    # daca nu mai avem clauze -> sat
     if not clauze:
         return True, asignari
 
-    # 2. daca exista o clauza goala, rezultatul este unsat
+    # daca exista o clauza vida -> unsat
     if [] in clauze:
         return False, {}
 
-    # 3. clauze unitare
-    unitari = [c[0] for c in clauze if len(c) == 1]
-    if unitari:
-        for literal in unitari:
-            clauze = simplifica(clauze, literal)
-            asignari[abs(literal)] = literal > 0
+    clauze_unitare = [clauza[0] for clauza in clauze if len(clauza) == 1]
+    if clauze_unitare:
+        for literal_unitar in clauze_unitare:
+            clauze = simplifica(clauze, literal_unitar)
+            asignari[abs(literal_unitar)] = literal_unitar > 0
         return dpll(clauze, asignari)
 
-    # 4. literali puri
+    # tratare literali puri
     toti_literalii = [literal for clauza in clauze for literal in clauza]
-    puri = [l for l in set(toti_literalii) if -l not in toti_literalii]
-    if puri:
-        for literal in puri:
-            clauze = simplifica(clauze, literal)
-            asignari[abs(literal)] = literal > 0
+    literali_puri = []
+    for literal in set(toti_literalii):
+        if -literal not in toti_literalii:
+            literali_puri.append(literal)
+
+    if literali_puri:
+        for literal_pur in literali_puri:
+            clauze = simplifica(clauze, literal_pur)
+            asignari[abs(literal_pur)] = literal_pur > 0
+        # Apel recursiv după eliminarea literalilor puri
         return dpll(clauze, asignari)
 
-    # 5. alegeri si backtracking
-    literal = clauze[0][0]
-    new_clauze_true = simplifica(clauze, literal)
-    sat_true, asignari_true = dpll(new_clauze_true, {**asignari, abs(literal): literal > 0})
-    if sat_true:
-        return True, asignari_true
+    # alegeri si backtracking
+    literal_de_incercat = clauze[0][0]
 
-    new_clauze_false = simplifica(clauze, -literal)
-    sat_false, asignari_false = dpll(new_clauze_false, {**asignari, abs(literal): literal < 0})
-    return sat_false, asignari_false
+    # asignare true
+    clauze_daca_true = simplifica(clauze, literal_de_incercat)
+    asignari_true = {**asignari, abs(literal_de_incercat): literal_de_incercat > 0}
+    satisfiabil_true, asignari_gasite_true = dpll(clauze_daca_true, asignari_true)
+
+    if satisfiabil_true:
+        return True, asignari_gasite_true
+
+    # daca nu a mers asignarea cu true, incercam cu false
+    clauze_daca_false = simplifica(clauze, -literal_de_incercat)
+    asignari_false = {**asignari, abs(literal_de_incercat): literal_de_incercat < 0}
+    satisfiabil_false, asignari_gasite_false = dpll(clauze_daca_false, asignari_false)
+
+    return satisfiabil_false, asignari_gasite_false
+
 
 
 def main():
